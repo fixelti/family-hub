@@ -1,0 +1,16 @@
+debug: True
+
+server:
+  host: localhost
+  port: 8080
+
+database:
+  host:
+  port:
+  user: root
+  password: root
+  name:
+
+jwt:
+  token_lifetime: 500
+  refresh_token_lifetime: 10
