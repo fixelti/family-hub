@@ -22,3 +22,4 @@ go.work
 
 .env
 config.yaml
+docker-compose.yaml
