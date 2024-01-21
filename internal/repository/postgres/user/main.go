@@ -11,6 +11,7 @@ import (
 
 type UserRepository interface {
 	Create(ctx context.Context, email, password string) (models.User, error)
+	GetByEmail(ctx context.Context, email string) (models.User, error)
 }
 
 type repository struct {
