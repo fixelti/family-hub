@@ -1,15 +1,16 @@
 package postgres
 
-import "github.com/fixelti/family-hub/internal/repository/postgres/user"
+import (
+	"github.com/fixelti/family-hub/internal/repository/postgres/user"
+	"github.com/fixelti/family-hub/lib/database/postgres"
+)
 
-type RepositoryManager interface{
-	user.UserRepository
+type RepositoryManager struct {
+	User user.UserRepository
 }
 
-type repository struct{
-	user.UserRepository
-}
-
-func New() RepositoryManager {
-	return repository{}
+func New(db postgres.Database) RepositoryManager {
+	return RepositoryManager{
+		User: user.New(db),
+	}
 }

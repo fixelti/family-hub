@@ -6,12 +6,12 @@ import (
 )
 
 type UsecaseManager struct {
-	userUsecase user.UserUsecase
+	User user.Usecase
 }
 
 
 func New(userRepo userRepo.UserRepository) UsecaseManager {
 	return UsecaseManager{
-		userUsecase: user.New(userRepo),
+		User: user.New(userRepo),
 	}
 }

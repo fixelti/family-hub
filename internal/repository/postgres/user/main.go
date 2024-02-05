@@ -10,8 +10,8 @@ import (
 )
 
 type UserRepository interface {
-	Create(ctx context.Context, email, password string) (models.User, error)
-	GetByEmail(ctx context.Context, email string) (models.User, error)
+	Create(ctx context.Context, email, password string) (uint, error)
+	GetByEmail(ctx context.Context, email string) (uint, error)
 }
 
 type repository struct {
@@ -22,63 +22,63 @@ func New(db postgres.Database) UserRepository {
 	return repository{db: db}
 }
 
-func (user repository) Create(ctx context.Context, email, password string) (models.User, error) {
+// Create создание пользователя
+func (user repository) Create(ctx context.Context, email, password string) (uint, error) {
+	var u models.User
 	tx, err := user.db.Begin(ctx)
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		log.Printf("failed to begin transaction: %s", err)
-		return models.User{}, err
+		return u.ID, err
 	}
 
-	rows, err := tx.Query(
+	err = tx.QueryRow(
 		ctx,
 		queryes.Create,
 		email,
-		password)
+		password).Scan(&u.ID)
 
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		log.Printf("failed to query: %s", err)
-		return models.User{}, err
+		return u.ID, err
 	}
+	tx.Commit(ctx)
 
-	result, err := postgres.ScanInStruct[models.User](rows)
-	if err != nil {
-		_ = tx.Rollback(ctx)
-		log.Printf("failed to collect extract: %s", err)
-		return models.User{}, err
-	}
-
-	return *result, nil
+	return u.ID, nil
 }
 
-func (user repository) GetByEmail(ctx context.Context, email string) (models.User, error) {
+// GetByEmail получение пользовательского id по его email
+func (user repository) GetByEmail(ctx context.Context, email string) (uint, error) {
+	var userID uint
 	tx, err := user.db.Begin(ctx)
 	if err != nil {
 		_ = tx.Rollback(ctx)
 		log.Printf("failed to begin transaction: %s", err)
-		return models.User{}, err
+		return userID, err
 	}
 
 	rows, err := tx.Query(
 		ctx,
 		queryes.GetByEmail,
 		email)
+	defer rows.Close()
 
-	if err != nil {
-		if err.Error() != postgres.ErrNotFound.Error() {
+	for rows.Next() {
+		if err := rows.Scan(&userID); err != nil {
 			_ = tx.Rollback(ctx)
-			log.Printf("failed to query: %s", err)
-			return models.User{}, err
+			log.Printf("failed to scan: %s", err)
+			return userID, err
 		}
 	}
 
-	result, err := postgres.ScanInStruct[models.User](rows)
 	if err != nil {
 		_ = tx.Rollback(ctx)
-		log.Printf("failed to collect extract: %s", err)
-		return models.User{}, err
+		log.Printf("failed to query: %s", err)
+		return userID, err
 	}
 
-	return *result, nil
+	tx.Commit(ctx)
+
+	return userID, nil
 }

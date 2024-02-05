@@ -38,7 +38,7 @@ type environment struct {
 	RefreshTokenKey string `env:"REFRESH_TOKEN_KEY,required"`
 }
 
-func New(pYaml, pENV string) *Config {
+func New(pYaml, pENV string) Config {
 	pathYaml = pYaml
 	pathENV = pENV
 	config := Config{}
@@ -53,7 +53,7 @@ func New(pYaml, pENV string) *Config {
 
 	config.Environment = env
 
-	return &config
+	return config
 }
 
 func (conf *Config) getYamlConfig() error {

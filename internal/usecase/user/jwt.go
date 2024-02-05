@@ -3,32 +3,33 @@ package user
 import (
 	"context"
 
-	"github.com/fixelti/family-hub/internal/common/models"
 	"golang.org/x/crypto/bcrypt"
 )
-
-func (user userUsecase) SignUp(ctx context.Context, email, password string) (models.UserDTO, error) {
-	emailExists, err := user.db.GetByEmail(ctx, email)
+ 
+func (user userUsecase) SignUp(ctx context.Context, email, password string) (uint, error) {
+	userID, err := user.db.GetByEmail(ctx, email)
 	if err != nil {
-		return models.UserDTO{}, err
+		return 0, err
 	}
-	if emailExists.ID != 0 {
-		return models.UserDTO{}, ErrUserExists
+	if userID != 0 {
+		return 0, ErrUserExists
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	if err != nil {
-		return models.UserDTO{}, err
+		return 0, err
 	}
 
-	createdUser, err := user.db.Create(ctx, email, string(passwordHash))
+	id, err := user.db.Create(ctx, email, string(passwordHash))
 	if err != nil {
-		return models.UserDTO{}, err
+		return 0, err
 	}
 
-	return createdUser.ToUserDTO(), nil
+	return id, nil
 }
 
-func tokenValidation(tokenKey string) (bool, error) {return false, nil}
+func tokenValidation(tokenKey string) (bool, error) { return false, nil }
 
-func createToken(tokenKey string, tokenLifeTime uint, paylaod map[string]any) (string, error) {return "", nil}
+func createToken(tokenKey string, tokenLifeTime uint, paylaod map[string]any) (string, error) {
+	return "", nil
+}
