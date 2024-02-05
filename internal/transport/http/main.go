@@ -39,6 +39,7 @@ func New(port string, userUsecase userUsecase.Usecase) {
 func (http Http) routing() {
 	user := http.echo.Group("/user")
 	user.POST("/signup", http.userHandler.SingUp)
+	user.POST("/signin", http.userHandler.SingIn)
 }
 
 func (cv *CustomValidator) Validate(data interface{}) error {

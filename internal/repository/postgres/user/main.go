@@ -11,7 +11,8 @@ import (
 
 type UserRepository interface {
 	Create(ctx context.Context, email, password string) (uint, error)
-	GetByEmail(ctx context.Context, email string) (uint, error)
+	GetIDByEmail(ctx context.Context, email string) (uint, error)
+	GetIDAndPasswordrByEmail(ctx context.Context, email string) (models.User, error)
 }
 
 type repository struct {
@@ -49,7 +50,7 @@ func (user repository) Create(ctx context.Context, email, password string) (uint
 }
 
 // GetByEmail получение пользовательского id по его email
-func (user repository) GetByEmail(ctx context.Context, email string) (uint, error) {
+func (user repository) GetIDByEmail(ctx context.Context, email string) (uint, error) {
 	var userID uint
 	tx, err := user.db.Begin(ctx)
 	if err != nil {
@@ -81,4 +82,29 @@ func (user repository) GetByEmail(ctx context.Context, email string) (uint, erro
 	tx.Commit(ctx)
 
 	return userID, nil
+}
+
+func (user repository) GetIDAndPasswordrByEmail(ctx context.Context, email string) (models.User, error) {
+	var createdUser models.User
+	tx, err := user.db.Begin(ctx)
+	if err != nil {
+		tx.Rollback(ctx)
+		log.Printf("failed to start transaction in GetUserByEmail: %s", err)
+		return models.User{}, err
+	}
+
+	tx.QueryRow(
+		ctx,
+		queryes.GetUserIDAndPasswordByEmail,
+		email,
+	).Scan(&createdUser.ID, &createdUser.Password)
+
+	if createdUser.ID == 0 {
+		tx.Rollback(ctx)
+		return models.User{}, ErrUserNotFound
+	}
+
+	tx.Commit(ctx)
+
+	return createdUser, nil
 }

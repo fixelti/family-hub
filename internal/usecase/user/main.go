@@ -3,19 +3,24 @@ package user
 import (
 	"context"
 
+	"github.com/fixelti/family-hub/internal/common/models"
+	"github.com/fixelti/family-hub/internal/config"
 	"github.com/fixelti/family-hub/internal/repository/postgres/user"
 )
 
 type Usecase interface {
 	SignUp(ctx context.Context, email, password string) (uint, error)
+	SignIn(ctx context.Context, email, password string) (models.Tokens, error)
 }
 
 type userUsecase struct {
-	db user.UserRepository
+	db     user.UserRepository
+	config config.Config
 }
 
-func New(db user.UserRepository) Usecase {
+func New(db user.UserRepository, config config.Config) Usecase {
 	return userUsecase{
-		db: db,
+		db:     db,
+		config: config,
 	}
 }

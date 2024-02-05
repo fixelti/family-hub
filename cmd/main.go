@@ -23,7 +23,7 @@ func main() {
 	)
 	db := libPostgres.New(context.Background(), dsn)
 	repositoryManager := postgres.New(db)
-	usecaseManager := usecase.New(repositoryManager.User)
+	usecaseManager := usecase.New(config, repositoryManager.User)
 
 	httpTransport.New(config.Server.Port, usecaseManager.User)
 }
