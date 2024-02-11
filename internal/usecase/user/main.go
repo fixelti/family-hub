@@ -11,6 +11,7 @@ import (
 type Usecase interface {
 	SignUp(ctx context.Context, email, password string) (uint, error)
 	SignIn(ctx context.Context, email, password string) (models.Tokens, error)
+	RefreshAccessToken(ctx context.Context, refreshToken string) (accessToken string, err error)
 }
 
 type userUsecase struct {

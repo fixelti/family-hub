@@ -26,7 +26,7 @@ func New(port string, userUsecase userUsecase.Usecase) {
 	e := echo.New()
 	e.Validator = &CustomValidator{validator: validator.New()}
 	http := Http{
-		echo: e,
+		echo:        e,
 		userHandler: userHandler.New(userUsecase),
 	}
 	http.routing()
@@ -34,12 +34,12 @@ func New(port string, userUsecase userUsecase.Usecase) {
 
 }
 
-
-
 func (http Http) routing() {
 	user := http.echo.Group("/user")
 	user.POST("/signup", http.userHandler.SingUp)
 	user.POST("/signin", http.userHandler.SingIn)
+	user.POST("/refresh-access-token", http.userHandler.RefreshAccessToken)
+
 }
 
 func (cv *CustomValidator) Validate(data interface{}) error {

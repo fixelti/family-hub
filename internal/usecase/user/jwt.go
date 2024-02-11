@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -69,7 +70,27 @@ func (user userUsecase) SignIn(ctx context.Context, email, password string) (mod
 	}, nil
 }
 
-func tokenValidation(tokenKey string) (bool, error) { return false, nil }
+func (user userUsecase) RefreshAccessToken(ctx context.Context, refreshToken string) (accessToken string, err error) {
+	refreshTokenKey := user.config.Environment.RefreshTokenKey
+	claims := models.Payload{}
+	fmt.Println(refreshTokenKey)
+	tkn, err := jwt.ParseWithClaims(refreshToken, &claims, func(token *jwt.Token) (any, error) {
+		return []byte(refreshTokenKey), nil
+	})
+	if err != nil {
+		log.Printf("failed to parse with claims: %s\n", err)
+		return accessToken, err
+	}
+
+	if !tkn.Valid {
+		log.Println("failed to refresh token: token is not valid")
+		return accessToken, ErrTokenIsNotValid
+	}
+
+	claims.Expirate = user.config.JWT.TokenLifetime
+	accessToken, err = generateAccessToken(user.config.Environment.TokenKey, claims)
+	return
+}
 
 func generateAccessToken(tokenKey string, payload models.Payload) (string, error) {
 	jwtPayload := jwt.MapClaims{

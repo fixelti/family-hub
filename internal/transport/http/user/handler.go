@@ -3,6 +3,7 @@ package user
 import (
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/fixelti/family-hub/internal/common/models"
 	"github.com/labstack/echo/v4"
@@ -64,4 +65,19 @@ func (handler Handler) SingIn(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, tokens)
+}
+
+func (handler Handler) RefreshAccessToken(c echo.Context) error {
+	refreshToken := c.Request().Header.Get("Authorization")
+	bearerToken := strings.Split(refreshToken, "Bearer ")
+	refreshToken = bearerToken[1]
+
+	accessToken, err := handler.Usecase.RefreshAccessToken(c.Request().Context(), refreshToken)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, nil)
+		return err
+	}
+
+	c.JSON(http.StatusOK, accessToken)
+	return nil
 }
