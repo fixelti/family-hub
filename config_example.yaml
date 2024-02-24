@@ -12,5 +12,5 @@ database:
   name:
 
 jwt:
-  token_lifetime: 500
-  refresh_token_lifetime: 10
+  token_lifetime: 15m
+  refresh_token_lifetime: 14400m

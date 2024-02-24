@@ -2,88 +2,67 @@ package config
 
 import (
 	"log"
+	"time"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
-var pathYaml string
-var pathENV string
-
-type Config struct {
-	Debug  bool `mapstructure:"debug"`
-	Server struct {
+type (
+	server struct {
 		Host string `mapstructure:"host"`
 		Port string `mapstructure:"port"`
-	} `mapstructure:"server"`
-	Database struct {
+	}
+
+	database struct {
 		Host     string `mapstructure:"host"`
 		Port     string `mapstructure:"port"`
 		User     string `mapstructure:"user"`
 		Password string `mapstructure:"password"`
 		Name     string `mapstructure:"name"`
-	} `mapstructure:"database"`
-	JWT struct {
-		// Время жизни токена в минутах
-		TokenLifetime uint `mapstructure:"token_lifetime"`
-		// Время жизни токена в часах
-		RefreshTokenLifeTime uint `mapstructure:"refresh_token_lifetime"`
-	} `mapstructure:"jwt"`
-	Environment environment `mapstructure:"environment"`
-}
+	}
 
-type environment struct {
-	TokenKey        string `env:"TOKEN_KEY,required"`
-	RefreshTokenKey string `env:"REFRESH_TOKEN_KEY,required"`
-}
+	jwt struct {
+		// Время жизни токена
+		TokenLifetime time.Duration `mapstructure:"token_lifetime"`
+		// Время жизни токена для обновление основного токена
+		RefreshTokenLifeTime time.Duration `mapstructure:"refresh_token_lifetime"`
+		TokenKey             string        `mapstructure:"-" env:"TOKEN_KEY,required"`
+		RefreshTokenKey      string        `mapstructure:"-" env:"REFRESH_TOKEN_KEY,required"`
+	}
 
-func New(pYaml, pENV string) Config {
-	pathYaml = pYaml
-	pathENV = pENV
+	Config struct {
+		Debug    bool     `mapstructure:"debug"`
+		Server   server   `mapstructure:"server"`
+		Database database `mapstructure:"database"`
+		JWT      jwt      `mapstructure:"jwt"`
+	}
+)
+
+func New(path string) Config {
 	config := Config{}
-	if err := config.getYamlConfig(); err != nil {
-		log.Fatalf("failed to read yaml config: %s", err)
-	}
-
-	env, err := getENVConfig()
-	if err != nil {
-		log.Fatalf("failed to read env config: %s", err)
-	}
-
-	config.Environment = env
-
-	return config
-}
-
-func (conf *Config) getYamlConfig() error {
-	viper.AddConfigPath(pathYaml)
+	viper.AddConfigPath(path)
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
 
 	if err := viper.ReadInConfig(); err != nil {
-		return err
+		log.Fatalf("failed to read config file: %s", err)
 	}
 
-	if err := viper.Unmarshal(&conf); err != nil {
-		return err
+	if err := viper.Unmarshal(&config); err != nil {
+		log.Fatalf("failed to unmarshal config file: %s", err)
 	}
 
-	return nil
-}
-
-func getENVConfig() (environment, error) {
-	envi := environment{}
-	err := godotenv.Load(pathENV)
+	err := godotenv.Load(path + "/.env")
 	if err != nil {
-		return envi, err
+		log.Fatalf("failed to read enviroment file: %s", err)
 	}
 
-	err = env.Parse(&envi)
+	err = env.Parse(&config)
 	if err != nil {
-		return envi, err
+		log.Fatalf("failed to parse enviroment file: %s", err)
 	}
 
-	return envi, err
+	return config
 }

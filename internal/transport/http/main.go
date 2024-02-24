@@ -1,9 +1,6 @@
 package httpTransport
 
 import (
-	"fmt"
-	"log"
-
 	"github.com/fixelti/family-hub/internal/transport/http/user"
 	userHandler "github.com/fixelti/family-hub/internal/transport/http/user"
 	userUsecase "github.com/fixelti/family-hub/internal/usecase/user"
@@ -22,7 +19,7 @@ type CustomValidator struct {
 	validator *validator.Validate
 }
 
-func New(port string, userUsecase userUsecase.Usecase) {
+func New(userUsecase userUsecase.Usecase) *echo.Echo {
 	e := echo.New()
 	e.Validator = &CustomValidator{validator: validator.New()}
 	http := Http{
@@ -30,7 +27,7 @@ func New(port string, userUsecase userUsecase.Usecase) {
 		userHandler: userHandler.New(userUsecase),
 	}
 	http.routing()
-	log.Fatalf("failed to start server: %s", http.echo.Start(fmt.Sprintf(":%s", port)))
+	return http.echo
 
 }
 

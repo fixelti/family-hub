@@ -24,6 +24,7 @@ func New(ctx context.Context, dsn string) Database {
 	return Database{conn}
 }
 
+// ScanInStruct функция помещает ответ базы данных в структуру
 func ScanInStruct[T any](rows pgx.Rows) (*T, error) {
 	return pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByName[T])
 }

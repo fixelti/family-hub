@@ -21,6 +21,5 @@ func (user User) ToUserDTO() UserDTO {
 	return UserDTO{
 		ID:       user.ID,
 		Email:    user.Email,
-		Password: user.Password,
 	}
 }

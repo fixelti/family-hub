@@ -2,109 +2,97 @@ package user
 
 import (
 	"context"
-	"log"
 
+	_ "github.com/fixelti/family-hub/internal"
+	customError "github.com/fixelti/family-hub/internal"
 	"github.com/fixelti/family-hub/internal/common/models"
 	queryes "github.com/fixelti/family-hub/internal/repository/postgres/user/internal"
 	"github.com/fixelti/family-hub/lib/database/postgres"
+	"go.uber.org/zap"
 )
 
 type UserRepository interface {
-	Create(ctx context.Context, email, password string) (uint, error)
-	GetIDByEmail(ctx context.Context, email string) (uint, error)
-	GetIDAndPasswordrByEmail(ctx context.Context, email string) (models.User, error)
+	Create(ctx context.Context, email, password string) (models.User, error)
+	GetUserByEmail(ctx context.Context, email string) (models.User, error)
 }
 
 type repository struct {
-	db postgres.Database
+	db     postgres.Database
+	logger *zap.Logger
 }
 
-func New(db postgres.Database) UserRepository {
-	return repository{db: db}
+func New(db postgres.Database, logger *zap.Logger) UserRepository {
+	return repository{db: db, logger: logger}
 }
 
 // Create создание пользователя
-func (user repository) Create(ctx context.Context, email, password string) (uint, error) {
-	var u models.User
+func (user repository) Create(ctx context.Context, email, password string) (models.User, error) {
 	tx, err := user.db.Begin(ctx)
 	if err != nil {
-		_ = tx.Rollback(ctx)
-		log.Printf("failed to begin transaction: %s", err)
-		return u.ID, err
+		user.logger.Error("failed to begin transaction: ", zap.Error(err))
+		return models.User{}, customError.ErrBeginTransaction
 	}
 
-	err = tx.QueryRow(
+	res, err := tx.Query(
 		ctx,
 		queryes.Create,
 		email,
-		password).Scan(&u.ID)
-
+		password)
 	if err != nil {
-		_ = tx.Rollback(ctx)
-		log.Printf("failed to query: %s", err)
-		return u.ID, err
+		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
+			user.logger.Error("failed to rollback transaction: ", zap.Error(err))
+		}
+		user.logger.Error("failed to make request : ", zap.Error(err))
+		return models.User{}, customError.ErrMakeQuery
 	}
-	tx.Commit(ctx)
 
-	return u.ID, nil
+	createdUser, err := postgres.ScanInStruct[models.User](res)
+	if err != nil {
+		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
+			user.logger.Error("failed to rollback transaction: ", zap.Error(err))
+		}
+		user.logger.Error("failed to scan in struct: ", zap.Error(err))
+		return models.User{}, customError.ErrScanInSctruct
+	}
+	if err := tx.Commit(ctx); err != nil {
+		user.logger.Error("failed to commit transaction: ", zap.Error(err))
+	}
+
+	return *createdUser, nil
 }
 
-// GetByEmail получение пользовательского id по его email
-func (user repository) GetIDByEmail(ctx context.Context, email string) (uint, error) {
-	var userID uint
+// GetUserByEmail возвращает пользователя по его email адрессу
+func (user repository) GetUserByEmail(ctx context.Context, email string) (models.User, error) {
 	tx, err := user.db.Begin(ctx)
 	if err != nil {
-		_ = tx.Rollback(ctx)
-		log.Printf("failed to begin transaction: %s", err)
-		return userID, err
+		user.logger.Error("failed to begin transaction: ", zap.Error(err))
+		return models.User{}, customError.ErrBeginTransaction
 	}
 
-	rows, err := tx.Query(
+	res, err := tx.Query(
 		ctx,
 		queryes.GetByEmail,
 		email)
-	defer rows.Close()
-
-	for rows.Next() {
-		if err := rows.Scan(&userID); err != nil {
-			_ = tx.Rollback(ctx)
-			log.Printf("failed to scan: %s", err)
-			return userID, err
+	if err != nil {
+		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
+			user.logger.Error("failed to rollback transaction: ", zap.Error(err))
 		}
+		user.logger.Error("failed to make request : ", zap.Error(err))
+		return models.User{}, customError.ErrMakeQuery
 	}
 
+	foundUser, err := postgres.ScanInStruct[models.User](res)
 	if err != nil {
-		_ = tx.Rollback(ctx)
-		log.Printf("failed to query: %s", err)
-		return userID, err
+		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
+			user.logger.Error("failed to rollback transaction: ", zap.Error(err))
+		}
+		user.logger.Error("failed to scan in struct: ", zap.Error(err))
+		return models.User{}, customError.ErrScanInSctruct
 	}
 
-	tx.Commit(ctx)
-
-	return userID, nil
-}
-
-func (user repository) GetIDAndPasswordrByEmail(ctx context.Context, email string) (models.User, error) {
-	var createdUser models.User
-	tx, err := user.db.Begin(ctx)
-	if err != nil {
-		tx.Rollback(ctx)
-		log.Printf("failed to start transaction in GetUserByEmail: %s", err)
-		return models.User{}, err
+	if err := tx.Commit(ctx); err != nil {
+		user.logger.Error("failed to commit transaction: ", zap.Error(err))
 	}
 
-	tx.QueryRow(
-		ctx,
-		queryes.GetUserIDAndPasswordByEmail,
-		email,
-	).Scan(&createdUser.ID, &createdUser.Password)
-
-	if createdUser.ID == 0 {
-		tx.Rollback(ctx)
-		return models.User{}, ErrUserNotFound
-	}
-
-	tx.Commit(ctx)
-
-	return createdUser, nil
+	return *foundUser, nil
 }
