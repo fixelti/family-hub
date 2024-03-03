@@ -27,7 +27,7 @@ func main() {
 	repositoryManager := postgres.New(db, logger)
 	usecaseManager := usecase.New(config, logger, repositoryManager.User)
 
-	server := httpTransport.New(usecaseManager.User)
+	server := httpTransport.New(usecaseManager.User, config, logger)
 
 	logger.Info(fmt.Sprintf("start server on port: %s\n", config.Server.Port))
 	if err := server.Start(config.Server.Port); err != nil {
