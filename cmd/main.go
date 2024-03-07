@@ -25,7 +25,7 @@ func main() {
 	)
 	db := libPostgres.New(context.Background(), dsn)
 	repositoryManager := postgres.New(db, logger)
-	usecaseManager := usecase.New(config, logger, repositoryManager.User)
+	usecaseManager := usecase.New(config, logger, repositoryManager)
 
 	server := httpTransport.New(usecaseManager.User, config, logger)
 

@@ -83,3 +83,7 @@ func (handler Handler) RefreshAccessToken(c echo.Context) error {
 	c.JSON(http.StatusOK, accessToken)
 	return nil
 }
+
+func (handler Handler) GetUserProfile(c echo.Context) error {
+	
+}
