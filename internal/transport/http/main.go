@@ -44,7 +44,7 @@ func (http Http) routing() {
 	user.POST("/signup", http.userHandler.SingUp)
 	user.POST("/signin", http.userHandler.SingIn)
 	user.POST("/refresh-access-token", http.userHandler.RefreshAccessToken)
-	user.GET("/profile", http.userHandler.GetProfile)
+	user.GET("/profile", http.userHandler.GetUserProfile, http.UserAuthorizationCheck)
 }
 
 func (cv *CustomValidator) Validate(data interface{}) error {

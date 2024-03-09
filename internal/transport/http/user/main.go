@@ -5,7 +5,10 @@ import (
 	"net/http"
 	"strings"
 
-	customError "github.com/fixelti/family-hub/internal"
+	internalHttp "net/http"
+
+	"github.com/fixelti/family-hub/internal/common/constants"
+	customError "github.com/fixelti/family-hub/internal/common/errors"
 	"github.com/fixelti/family-hub/internal/common/models"
 	"github.com/fixelti/family-hub/internal/usecase/user"
 	"github.com/labstack/echo/v4"
@@ -72,18 +75,31 @@ func (handler Handler) SingIn(c echo.Context) error {
 func (handler Handler) RefreshAccessToken(c echo.Context) error {
 	refreshToken := c.Request().Header.Get("Authorization")
 	bearerToken := strings.Split(refreshToken, "Bearer ")
+	if len(bearerToken) != 2 {
+		c.JSON(internalHttp.StatusForbidden, nil)
+		return customError.ErrInvalidCredentials
+	}
 	refreshToken = bearerToken[1]
 
 	accessToken, err := handler.Usecase.RefreshAccessToken(c.Request().Context(), refreshToken)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, nil)
+		c.JSON(http.StatusForbidden, nil)
 		return err
 	}
 
-	c.JSON(http.StatusOK, accessToken)
+	c.JSON(http.StatusOK, echo.Map{"access_token": accessToken})
 	return nil
 }
 
 func (handler Handler) GetUserProfile(c echo.Context) error {
-	
+	userID := c.Get(constants.UserIDContextKey)
+
+	userProfile, err := handler.Usecase.GetProfile(c.Request().Context(), userID.(uint))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, nil)
+		return customError.ErrInternal
+	}
+
+	c.JSON(http.StatusOK, userProfile)
+	return nil
 }

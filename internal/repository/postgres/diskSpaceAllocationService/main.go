@@ -2,11 +2,13 @@ package diskSpaceAllocationService
 
 import (
 	"context"
+	"errors"
 
-	customError "github.com/fixelti/family-hub/internal"
+	customError "github.com/fixelti/family-hub/internal/common/errors"
 	"github.com/fixelti/family-hub/internal/common/models"
 	queryes "github.com/fixelti/family-hub/internal/repository/postgres/diskSpaceAllocationService/internal"
 	"github.com/fixelti/family-hub/lib/database/postgres"
+	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 )
 
@@ -15,13 +17,13 @@ type DiskSpaceAllocationServiceRepository interface {
 }
 
 type repository struct {
-	db postgres.Database
+	db     postgres.Database
 	logger *zap.Logger
 }
 
 func New(db postgres.Database, logger *zap.Logger) DiskSpaceAllocationServiceRepository {
 	return repository{
-		db: db,
+		db:     db,
 		logger: logger,
 	}
 }
@@ -51,6 +53,9 @@ func (service repository) GetUserServices(ctx context.Context, userID uint) ([]m
 	if err != nil {
 		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil {
 			service.logger.Error("failed to rollback transaction: ", zap.Error(err))
+		}
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
 		}
 		service.logger.Error("failed to scan in struct: ", zap.Error(err))
 		return nil, customError.ErrScanInSctruct

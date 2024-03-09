@@ -3,9 +3,10 @@ package user
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
-	customError "github.com/fixelti/family-hub/internal"
+	customError "github.com/fixelti/family-hub/internal/common/errors"
 	"github.com/fixelti/family-hub/internal/common/models"
 	"github.com/fixelti/family-hub/internal/config"
 	"github.com/fixelti/family-hub/internal/repository/postgres/diskSpaceAllocationService"
@@ -19,6 +20,7 @@ type Usecase interface {
 	SignUp(ctx context.Context, email, password string) (models.UserDTO, error)
 	SignIn(ctx context.Context, email, password string) (models.Tokens, error)
 	RefreshAccessToken(ctx context.Context, refreshToken string) (accessToken string, err error)
+	GetProfile(ctx context.Context, userID uint) (models.UserProfile, error)
 }
 
 type userUsecase struct {
@@ -73,6 +75,7 @@ func (user userUsecase) SignIn(ctx context.Context, email, password string) (mod
 		return models.Tokens{}, customError.ErrInternal
 	}
 
+	fmt.Println(foundUser)
 	if err := bcrypt.CompareHashAndPassword([]byte(foundUser.Password), []byte(password)); err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return models.Tokens{}, customError.ErrInvalidCredentials
@@ -118,7 +121,6 @@ func (user userUsecase) RefreshAccessToken(ctx context.Context, refreshToken str
 		return []byte(refreshTokenKey), nil
 	})
 	if err != nil {
-		user.logger.Error("failed to parse jwt claims", zap.Error(err))
 		return accessToken, customError.ErrInternal
 	}
 
@@ -126,7 +128,7 @@ func (user userUsecase) RefreshAccessToken(ctx context.Context, refreshToken str
 		return accessToken, customError.ErrTokenIsNotValid
 	}
 
-	accessToken, err = generateToken(user.config.JWT.TokenKey, claims["id"].(uint), user.config.JWT.TokenLifetime)
+	accessToken, err = generateToken(user.config.JWT.TokenKey, uint(claims["id"].(float64)), user.config.JWT.TokenLifetime)
 	if err != nil {
 		user.logger.Error("failed to generate access token", zap.Error(err))
 		return accessToken, customError.ErrInternal
@@ -134,10 +136,10 @@ func (user userUsecase) RefreshAccessToken(ctx context.Context, refreshToken str
 	return
 }
 
-func (user userUsecase) GetProfile(ctx context.Context, email string) (models.UserProfile, error) {
-	foundUser, err := user.userRepository.GetUserByEmail(ctx, email)
+func (user userUsecase) GetProfile(ctx context.Context, userID uint) (models.UserProfile, error) {
+	foundUser, err := user.userRepository.GetUserByID(ctx, userID)
 	if err != nil {
-		user.logger.Error("failed to get user by email", zap.Error(err))
+		user.logger.Error("failed to get user by id", zap.Error(err))
 		return models.UserProfile{}, customError.ErrInternal
 	}
 
@@ -148,7 +150,7 @@ func (user userUsecase) GetProfile(ctx context.Context, email string) (models.Us
 	}
 
 	return models.UserProfile{
-		Email: foundUser.Email,
+		Email:                      foundUser.Email,
 		DiskSpaceAllocationService: services,
 	}, nil
 }

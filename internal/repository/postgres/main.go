@@ -15,5 +15,6 @@ type RepositoryManager struct {
 func New(db postgres.Database, logger *zap.Logger) RepositoryManager {
 	return RepositoryManager{
 		User: user.New(db, logger),
+		DiskSpaceAllocationService: diskSpaceAllocationService.New(db, logger),
 	}
 }
