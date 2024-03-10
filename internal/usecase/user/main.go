@@ -3,11 +3,13 @@ package user
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
-	customError "github.com/fixelti/family-hub/internal"
+	customError "github.com/fixelti/family-hub/internal/common/errors"
 	"github.com/fixelti/family-hub/internal/common/models"
 	"github.com/fixelti/family-hub/internal/config"
+	"github.com/fixelti/family-hub/internal/repository/postgres/diskSpaceAllocationService"
 	"github.com/fixelti/family-hub/internal/repository/postgres/user"
 	"github.com/golang-jwt/jwt"
 	"go.uber.org/zap"
@@ -18,24 +20,31 @@ type Usecase interface {
 	SignUp(ctx context.Context, email, password string) (models.UserDTO, error)
 	SignIn(ctx context.Context, email, password string) (models.Tokens, error)
 	RefreshAccessToken(ctx context.Context, refreshToken string) (accessToken string, err error)
+	GetProfile(ctx context.Context, userID uint) (models.UserProfile, error)
 }
 
 type userUsecase struct {
-	db     user.UserRepository
-	config config.Config
-	logger *zap.Logger
+	userRepository    user.UserRepository
+	diskSASRepository diskSpaceAllocationService.DiskSpaceAllocationServiceRepository
+	config            config.Config
+	logger            *zap.Logger
 }
 
-func New(db user.UserRepository, config config.Config, logger *zap.Logger) Usecase {
+func New(
+	userRepository user.UserRepository,
+	diskSASRepository diskSpaceAllocationService.DiskSpaceAllocationServiceRepository,
+	config config.Config,
+	logger *zap.Logger) Usecase {
 	return userUsecase{
-		db:     db,
-		config: config,
-		logger: logger,
+		userRepository:    userRepository,
+		diskSASRepository: diskSASRepository,
+		config:            config,
+		logger:            logger,
 	}
 }
 
 func (user userUsecase) SignUp(ctx context.Context, email, password string) (models.UserDTO, error) {
-	foundUser, err := user.db.GetUserByEmail(ctx, email)
+	foundUser, err := user.userRepository.GetUserByEmail(ctx, email)
 	if err != nil {
 		user.logger.Error("failed to get user by email", zap.Error(err))
 		return models.UserDTO{}, customError.ErrInternal
@@ -50,7 +59,7 @@ func (user userUsecase) SignUp(ctx context.Context, email, password string) (mod
 		return models.UserDTO{}, customError.ErrInternal
 	}
 
-	createdUser, err := user.db.Create(ctx, email, string(passwordHash))
+	createdUser, err := user.userRepository.Create(ctx, email, string(passwordHash))
 	if err != nil {
 		user.logger.Error("failed to create user", zap.Error(err))
 		return models.UserDTO{}, customError.ErrInternal
@@ -60,12 +69,13 @@ func (user userUsecase) SignUp(ctx context.Context, email, password string) (mod
 }
 
 func (user userUsecase) SignIn(ctx context.Context, email, password string) (models.Tokens, error) {
-	foundUser, err := user.db.GetUserByEmail(ctx, email)
+	foundUser, err := user.userRepository.GetUserByEmail(ctx, email)
 	if err != nil {
 		user.logger.Error("failed to get user by email", zap.Error(err))
 		return models.Tokens{}, customError.ErrInternal
 	}
 
+	fmt.Println(foundUser)
 	if err := bcrypt.CompareHashAndPassword([]byte(foundUser.Password), []byte(password)); err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return models.Tokens{}, customError.ErrInvalidCredentials
@@ -111,7 +121,6 @@ func (user userUsecase) RefreshAccessToken(ctx context.Context, refreshToken str
 		return []byte(refreshTokenKey), nil
 	})
 	if err != nil {
-		user.logger.Error("failed to parse jwt claims", zap.Error(err))
 		return accessToken, customError.ErrInternal
 	}
 
@@ -119,12 +128,31 @@ func (user userUsecase) RefreshAccessToken(ctx context.Context, refreshToken str
 		return accessToken, customError.ErrTokenIsNotValid
 	}
 
-	accessToken, err = generateToken(user.config.JWT.TokenKey, claims["id"].(uint), user.config.JWT.TokenLifetime)
+	accessToken, err = generateToken(user.config.JWT.TokenKey, uint(claims["id"].(float64)), user.config.JWT.TokenLifetime)
 	if err != nil {
 		user.logger.Error("failed to generate access token", zap.Error(err))
 		return accessToken, customError.ErrInternal
 	}
 	return
+}
+
+func (user userUsecase) GetProfile(ctx context.Context, userID uint) (models.UserProfile, error) {
+	foundUser, err := user.userRepository.GetUserByID(ctx, userID)
+	if err != nil {
+		user.logger.Error("failed to get user by id", zap.Error(err))
+		return models.UserProfile{}, customError.ErrInternal
+	}
+
+	services, err := user.diskSASRepository.GetUserServices(ctx, foundUser.ID)
+	if err != nil {
+		user.logger.Error("failed to get user services: ", zap.Error(err))
+		return models.UserProfile{}, customError.ErrInternal
+	}
+
+	return models.UserProfile{
+		Email:                      foundUser.Email,
+		DiskSpaceAllocationService: services,
+	}, nil
 }
 
 func generateToken(tokenKey string, userID uint, expirate time.Duration) (token string, err error) {

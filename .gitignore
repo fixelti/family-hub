@@ -24,3 +24,9 @@ go.work
 config.yaml
 docker-compose.yaml
 Makefile
+lib/logger/.DS_Store
+lib/.DS_Store
+lib/database/.DS_Store
+internal/repository/.DS_Store
+internal/.DS_Store
+.DS_Store

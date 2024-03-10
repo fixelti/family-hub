@@ -2,6 +2,7 @@ package models
 
 import "time"
 
+// TODO: разобраться в полями для валидации
 type UserDTO struct {
 	ID       uint   `json:"id"`
 	Email    string `json:"email" validate:"required"`

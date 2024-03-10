@@ -23,13 +23,13 @@ type CustomValidator struct {
 	validator *validator.Validate
 }
 
-func New(userUsecase userUsecase.Usecase, 
-	config config.Config, 
+func New(userUsecase userUsecase.Usecase,
+	config config.Config,
 	logger *zap.Logger) *echo.Echo {
 	e := echo.New()
 	e.Validator = &CustomValidator{validator: validator.New()}
 	http := Http{
-		logger: logger,
+		logger:      logger,
 		config:      config,
 		echo:        e,
 		userHandler: userHandler.New(userUsecase),
@@ -44,7 +44,7 @@ func (http Http) routing() {
 	user.POST("/signup", http.userHandler.SingUp)
 	user.POST("/signin", http.userHandler.SingIn)
 	user.POST("/refresh-access-token", http.userHandler.RefreshAccessToken)
-
+	user.GET("/profile", http.userHandler.GetUserProfile, http.UserAuthorizationCheck)
 }
 
 func (cv *CustomValidator) Validate(data interface{}) error {
