@@ -56,16 +56,16 @@ func (mr *MockJWTMockRecorder) GenerateTokens(userID any) *gomock.Call {
 }
 
 // RefreshToken mocks base method.
-func (m *MockJWT) RefreshToken(ctx context.Context) (string, error) {
+func (m *MockJWT) RefreshToken(ctx context.Context, refreshToken string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RefreshToken", ctx)
+	ret := m.ctrl.Call(m, "RefreshToken", ctx, refreshToken)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RefreshToken indicates an expected call of RefreshToken.
-func (mr *MockJWTMockRecorder) RefreshToken(ctx any) *gomock.Call {
+func (mr *MockJWTMockRecorder) RefreshToken(ctx, refreshToken any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshToken", reflect.TypeOf((*MockJWT)(nil).RefreshToken), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshToken", reflect.TypeOf((*MockJWT)(nil).RefreshToken), ctx, refreshToken)
 }

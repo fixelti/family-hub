@@ -14,6 +14,11 @@ var (
 	ErrInternal           = errors.New("US-000001")
 	ErrUserExists         = errors.New("US-000002")
 	ErrInvalidCredentials = errors.New("US-000003")
-	ErrTokenIsNotValid    = errors.New("US-000004")
 	ErrBind               = errors.New("US-000005")
+)
+
+// lib/jwt errors
+var (
+	ErrTokenWithClaimsIsNil = errors.New("JWT-000001")
+	ErrTokenIsNotValid      = errors.New("JWT-000002")
 )

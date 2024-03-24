@@ -9,4 +9,12 @@ migration_up:
 	goose -dir internal/repository/migration postgres "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_URL):$(DB_PORT)/$(DB_NAME)?sslmode=disable" up
 
 migration_down:
-    goose -dir internal/repository/migration postgres "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_URL):$(DB_PORT)/$(DB_NAME)?sslmode=disable" down
+	goose -dir internal/repository/migration postgres "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_URL):$(DB_PORT)/$(DB_NAME)?sslmode=disable" down
+
+# Generate mocks
+mocks_generate:
+	go generate ./...
+
+# Start tests with coverage (go get golang.org/x/tools/cmd/cover)
+tests:
+	go test ./... -coverprofile cover.out && go tool cover -func cover.out

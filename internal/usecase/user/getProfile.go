@@ -15,6 +15,10 @@ func (user userUsecase) GetProfile(ctx context.Context, userID uint) (models.Use
 		return models.UserProfile{}, customError.ErrInternal
 	}
 
+	if foundUser.ID == 0 {
+		return models.UserProfile{}, customError.ErrInvalidCredentials
+	}
+
 	services, err := user.diskSASRepository.GetUserServices(ctx, foundUser.ID)
 	if err != nil {
 		user.logger.Error("failed to get user services: ", zap.Error(err))
