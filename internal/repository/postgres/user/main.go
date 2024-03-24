@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
+//go:generate mockgen -source ./main.go -destination ./mocks/main.go
 type UserRepository interface {
 	Create(ctx context.Context, email, password string) (models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (models.User, error)

@@ -5,9 +5,11 @@ import (
 	"github.com/fixelti/family-hub/internal/transport/http/user"
 	userHandler "github.com/fixelti/family-hub/internal/transport/http/user"
 	userUsecase "github.com/fixelti/family-hub/internal/usecase/user"
+	"github.com/fixelti/family-hub/lib/jwt"
 	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
+	jwtHandler "github.com/fixelti/family-hub/internal/transport/http/jwt"
 )
 
 type Http struct {
@@ -17,6 +19,7 @@ type Http struct {
 	logger    *zap.Logger
 
 	userHandler user.Handler
+	jwtHandler jwtHandler.Handler
 }
 
 type CustomValidator struct {
@@ -25,26 +28,20 @@ type CustomValidator struct {
 
 func New(userUsecase userUsecase.Usecase,
 	config config.Config,
-	logger *zap.Logger) *echo.Echo {
+	logger *zap.Logger,
+	jwt jwt.JWT) *echo.Echo {
 	e := echo.New()
 	e.Validator = &CustomValidator{validator: validator.New()}
 	http := Http{
 		logger:      logger,
 		config:      config,
 		echo:        e,
-		userHandler: userHandler.New(userUsecase),
+		userHandler: userHandler.New(userUsecase, logger),
+		jwtHandler: jwtHandler.New(logger, jwt),
 	}
 	http.routing()
 	return http.echo
 
-}
-
-func (http Http) routing() {
-	user := http.echo.Group("/user")
-	user.POST("/signup", http.userHandler.SingUp)
-	user.POST("/signin", http.userHandler.SingIn)
-	user.POST("/refresh-access-token", http.userHandler.RefreshAccessToken)
-	user.GET("/profile", http.userHandler.GetUserProfile, http.UserAuthorizationCheck)
 }
 
 func (cv *CustomValidator) Validate(data interface{}) error {

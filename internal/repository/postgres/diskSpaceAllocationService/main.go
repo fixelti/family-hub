@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
+//go:generate mockgen -source ./main.go -destination ./mocks/main.go
 type DiskSpaceAllocationServiceRepository interface {
 	GetUserServices(ctx context.Context, userID uint) ([]models.DiskSpaceAllocationService, error)
 }

@@ -7,14 +7,20 @@ import (
 	"go.uber.org/zap"
 )
 
+
+type Repository interface {
+	user.UserRepository
+	diskSpaceAllocationService.DiskSpaceAllocationServiceRepository
+}
+
 type RepositoryManager struct {
-	User user.UserRepository
+	User                       user.UserRepository
 	DiskSpaceAllocationService diskSpaceAllocationService.DiskSpaceAllocationServiceRepository
 }
 
 func New(db postgres.Database, logger *zap.Logger) RepositoryManager {
 	return RepositoryManager{
-		User: user.New(db, logger),
+		User:                       user.New(db, logger),
 		DiskSpaceAllocationService: diskSpaceAllocationService.New(db, logger),
 	}
 }
